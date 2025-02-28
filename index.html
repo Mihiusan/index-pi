@@ -31,8 +31,20 @@
             console.log('Status:', message);
         }
 
+        // Check if running in Pi Browser
+        function isPiBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            return /PiBrowser/.test(ua);
+        }
+
         // Wait for Pi SDK to load
         window.addEventListener('load', function() {
+            if (!isPiBrowser()) {
+                updateStatus('Error: This must be run in the Pi Browser');
+                console.error('Not in Pi Browser environment');
+                return;
+            }
+
             if (typeof Pi === 'undefined') {
                 updateStatus('Error: Pi SDK failed to load');
                 console.error('Pi SDK not loaded');
@@ -41,6 +53,12 @@
 
             // Initialize Pi SDK
             try {
+                console.log('Initializing Pi SDK with config:', {
+                    version: "2.0",
+                    sandbox: true,
+                    apiKey: PI_API_KEY,
+                    appUrl: 'https://mihiusan.github.io'
+                });
                 Pi.init({
                     version: "2.0",
                     sandbox: true, // Set to false in production
@@ -58,10 +76,11 @@
         // Handle authentication with timeout
         async function authenticateWithTimeout() {
             const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Authentication timed out")), 10000) // 10-second timeout
+                setTimeout(() => reject(new Error("Authentication timed out")), 10000)
             );
 
             try {
+                console.log('Attempting authentication with scopes:', ['username', 'payments']);
                 const authPromise = Pi.authenticate(['username', 'payments'], onIncompletePayment);
                 const auth = await Promise.race([authPromise, timeoutPromise]);
                 document.getElementById('auth-status').innerHTML = 
