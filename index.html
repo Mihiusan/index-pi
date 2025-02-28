@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok on Pi Network</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #status { margin-top: 10px; color: red; }
+    </style>
+</head>
+<body>
+    <h1>TikTok on Pi Network</h1>
+    <div id="auth-status">Authenticating...</div>
+    <div id="status"></div>
+
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script>
+        function updateStatus(message) {
+            document.getElementById('status').innerText = message;
+        }
+
+        // Initialize Pi SDK with API key
+        updateStatus("Initializing Pi SDK...");
+        try {
+            Pi.init({ 
+                version: "2.0", 
+                sandbox: true, // Set to false in production
+                apiKey: 'YOUR_API_KEY' // Replace with your API key
+            });
+            updateStatus("Pi SDK initialized. Authenticating...");
+        } catch (e) {
+            updateStatus("Pi SDK init failed: " + e.message);
+            return;
+        }
+
+        // Handle incomplete payments by resuming
+        async function onIncompletePaymentFound(payment) {
+            updateStatus("Resuming incomplete payment: " + payment.identifier);
+            try {
+                const paymentId = payment.identifier;
+                // Resume payment flow
+                await Pi.submitPayment(paymentId);
+                updateStatus("Payment resumed successfully");
+            } catch (error) {
+                updateStatus("Payment resume failed: " + error.message);
+            }
+        }
+
+        // Authenticate with correct scopes
+        try {
+            Pi.authenticate(['username', 'payments'], onIncompletePaymentFound)
+                .then(auth => {
+                    document.getElementById('auth-status').innerText = 
+                        `Welcome, ${auth.user.username}!`;
+                    updateStatus("Authentication successful!");
+                    // Proceed with post-auth logic
+                })
+                .catch(error => {
+                    updateStatus("Authentication failed: " + 
+                        (error.message || "Check console for details"));
+                    console.error("Auth Error:", error);
+                });
+        } catch (e) {
+            updateStatus("Authentication call failed: " + e.message);
+        }
+    </script>
+</body>
+</html>
