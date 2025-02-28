@@ -5,8 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TikTok on Pi Network</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        #status { margin-top: 10px; color: red; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #status {
+            margin-top: 10px;
+            color: red;
+        }
     </style>
 </head>
 <body>
@@ -16,53 +22,81 @@
 
     <script src="https://sdk.minepi.com/pi-sdk.js"></script>
     <script>
+        // API Key Configuration
+        const PI_API_KEY = 'ecz510ma0qx2jo0dham6mazyzmxn4x4tfzcd6g7b6kx56xdiarbaotdaq3e7tg4m';
+
+        // Update status message
         function updateStatus(message) {
-            document.getElementById('status').innerText = message;
+            document.getElementById('status').textContent = message;
         }
 
-        // Initialize Pi SDK with API key
-        updateStatus("Initializing Pi SDK...");
-        try {
-            Pi.init({ 
-                version: "2.0", 
-                sandbox: true, // Set to false in production
-                apiKey: 'ecz510ma0qx2jo0dham6mazyzmxn4x4tfzcd6g7b6kx56xdiarbaotdaq3e7tg4m' // Replace with your API key
-            });
-            updateStatus("Pi SDK initialized. Authenticating...");
-        } catch (e) {
-            updateStatus("Pi SDK init failed: " + e.message);
-            return;
-        }
-
-        // Handle incomplete payments by resuming
-        async function onIncompletePaymentFound(payment) {
-            updateStatus("Resuming incomplete payment: " + payment.identifier);
+        // Initialize Pi SDK
+        (function initializePiSDK() {
             try {
-                const paymentId = payment.identifier;
-                // Resume payment flow
-                await Pi.submitPayment(paymentId);
-                updateStatus("Payment resumed successfully");
+                Pi.init({
+                    version: "2.0",
+                    sandbox: true, // Set to false in production
+                    apiKey: PI_API_KEY
+                });
+
+                // Configure authentication
+                Pi.configure({
+                    authentication: {
+                        redirectUri: window.location.href,
+                        onReady: () => {
+                            console.log("Pi Auth Ready");
+                            updateStatus("Auth system ready");
+                        },
+                        onError: (error) => {
+                            console.error("Pi Auth Error:", error);
+                            updateStatus("Auth error: " + error.message);
+                        }
+                    }
+                });
+
+                updateStatus("Pi SDK initialized. Starting authentication...");
+            } catch (e) {
+                updateStatus("Pi SDK init failed: " + e.message);
+                console.error("Initialization error:", e);
+                return;
+            }
+        })();
+
+        // Handle authentication
+        async function authenticate() {
+            try {
+                const auth = await Pi.authenticate(['username', 'payments'], onIncompletePayment);
+                document.getElementById('auth-status').innerHTML = 
+                    `Welcome <strong>${auth.user.username}</strong>!`;
+                updateStatus("Authentication successful!");
+                // Add your post-auth logic here
+                // Example: Fetch user data or initiate payments
             } catch (error) {
-                updateStatus("Payment resume failed: " + error.message);
+                updateStatus("Auth failed: " + error.message);
+                console.error("Authentication error:", error);
             }
         }
 
-        // Authenticate with correct scopes
-        try {
-            Pi.authenticate(['username', 'payments'], onIncompletePaymentFound)
-                .then(auth => {
-                    document.getElementById('auth-status').innerText = 
-                        `Welcome, ${auth.user.username}!`;
-                    updateStatus("Authentication successful!");
-                    // Proceed with post-auth logic
-                })
-                .catch(error => {
-                    updateStatus("Authentication failed: " + 
-                        (error.message || "Check console for details"));
-                    console.error("Auth Error:", error);
-                });
-        } catch (e) {
-            updateStatus("Authentication call failed: " + e.message);
+        // Handle incomplete payments
+        async function onIncompletePayment(payment) {
+            console.log("Found incomplete payment:", payment);
+            try {
+                await Pi.submitPayment(payment.identifier);
+                updateStatus("Payment completed successfully");
+                return true;
+            } catch (error) {
+                updateStatus("Payment error: " + error.message);
+                console.error("Payment error:", error);
+                return false;
+            }
+        }
+
+        // Start authentication when ready
+        if (typeof Pi !== 'undefined') {
+            Pi.on('ready', authenticate);
+        } else {
+            console.error('Pi SDK not loaded');
+            updateStatus('Error: Pi SDK failed to load');
         }
     </script>
 </body>
