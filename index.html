@@ -31,17 +31,24 @@
             console.log('Status:', message);
         }
 
-        // Check if running in Pi Browser
+        // Enhanced Pi Browser detection
         function isPiBrowser() {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            return /PiBrowser/.test(ua);
+            const ua = navigator.userAgent || navigator.vendor || window.opera || '';
+            console.log('User Agent:', ua); // Log the full user agent for debugging
+            const isPi = /PiBrowser|MinePi/i.test(ua); // More flexible check
+            return isPi;
         }
 
         // Wait for Pi SDK to load
         window.addEventListener('load', function() {
+            console.log('Window loaded, checking environment...');
+            
+            // Log and display the user agent for verification
+            updateStatus('Checking environment... User Agent: ' + navigator.userAgent);
+
             if (!isPiBrowser()) {
                 updateStatus('Error: This must be run in the Pi Browser');
-                console.error('Not in Pi Browser environment');
+                console.error('Not detected as Pi Browser environment');
                 return;
             }
 
