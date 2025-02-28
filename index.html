@@ -30,37 +30,30 @@
             document.getElementById('status').textContent = message;
         }
 
-        // Initialize Pi SDK
-        (function initializePiSDK() {
+        // Wait for Pi SDK to load
+        window.addEventListener('load', function() {
+            if (typeof Pi === 'undefined') {
+                updateStatus('Error: Pi SDK failed to load');
+                console.error('Pi SDK not loaded');
+                return;
+            }
+
+            // Initialize Pi SDK
             try {
                 Pi.init({
                     version: "2.0",
                     sandbox: true, // Set to false in production
                     apiKey: PI_API_KEY
                 });
-
-                // Configure authentication
-                Pi.configure({
-                    authentication: {
-                        redirectUri: window.location.href,
-                        onReady: () => {
-                            console.log("Pi Auth Ready");
-                            updateStatus("Auth system ready");
-                        },
-                        onError: (error) => {
-                            console.error("Pi Auth Error:", error);
-                            updateStatus("Auth error: " + error.message);
-                        }
-                    }
-                });
-
                 updateStatus("Pi SDK initialized. Starting authentication...");
+                
+                // Start authentication immediately after init
+                authenticate();
             } catch (e) {
                 updateStatus("Pi SDK init failed: " + e.message);
                 console.error("Initialization error:", e);
-                return;
             }
-        })();
+        });
 
         // Handle authentication
         async function authenticate() {
@@ -70,7 +63,6 @@
                     `Welcome <strong>${auth.user.username}</strong>!`;
                 updateStatus("Authentication successful!");
                 // Add your post-auth logic here
-                // Example: Fetch user data or initiate payments
             } catch (error) {
                 updateStatus("Auth failed: " + error.message);
                 console.error("Authentication error:", error);
@@ -89,14 +81,6 @@
                 console.error("Payment error:", error);
                 return false;
             }
-        }
-
-        // Start authentication when ready
-        if (typeof Pi !== 'undefined') {
-            Pi.on('ready', authenticate);
-        } else {
-            console.error('Pi SDK not loaded');
-            updateStatus('Error: Pi SDK failed to load');
         }
     </script>
 </body>
